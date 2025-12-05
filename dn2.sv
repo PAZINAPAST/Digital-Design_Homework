@@ -49,11 +49,11 @@ module uart_system_receiver #(  //BUG WITH RX_DONE
     input logic reset,
     input logic rx,
     output logic [DBITS-1:0] data_out,
-    output logic rx_done,
-    output logic ttest_reciever,
+    output logic rx_done
+    /*output logic ttest_reciever,
     output logic ttest_reciever1,
     output logic ttest_reciever2,
-    output logic ttest_reciever3
+    output logic ttest_reciever3*/
 );
 
     logic sample_tick;
@@ -132,7 +132,7 @@ module uart_system_receiver #(  //BUG WITH RX_DONE
                     if(s_cnt == 4'd15) begin
                         s_cnt_next = 0;
                         shift_reg_next = {rx, shift_reg[DBITS-1:1]};
-                        if (n_cnt == DBITS -1) begin // WHAT THE FUCK
+                        if (n_cnt == DBITS -1) begin
                             next_state = STOP;
                         end else begin
                             n_cnt_next = n_cnt + 1;
@@ -156,10 +156,10 @@ module uart_system_receiver #(  //BUG WITH RX_DONE
         endcase
     end
 
-    asssign ttest_reciever = (state == IDLE);
+    /*asssign ttest_reciever = (state == IDLE);
     asssign ttest_reciever1 = (state == START);
     asssign ttest_reciever2 = (state == DATA);
-    asssign ttest_reciever3 = (state == STOP);
+    asssign ttest_reciever3 = (state == STOP);*/
 
     assign data_out = shift_reg;
 
@@ -315,19 +315,25 @@ module rgb_controller (
     input logic clock,
     input logic reset,
     input logic [5:0] SW,
-    output logic [2:0] RGB
+    output logic [2:0] RGB,
+    output logic cr1,
+    output logic cr2,
+    output logic cg1,
+    output logic cg2,
+    output logic cb1,
+    output logic cb2
 );
 
     logic [1:0] red, green, blue;
-    logic [1:0] pwm_count;
+    logic [2:0] pwm_count;
     
     assign red = SW[1:0];
-    assign blue = SW[3:2];
-    assign green = SW[5:4];
+    assign green = SW[3:2];
+    assign blue = SW[5:4];
     
     always_ff @(posedge clock) begin
         if(reset) begin
-            pwm_count <= 2'b0;
+            pwm_count <= 3'b0;
         end else begin
             pwm_count <= pwm_count + 1;
         end
@@ -336,6 +342,13 @@ module rgb_controller (
     assign RGB[2] = (pwm_count < red);
     assign RGB[1] = (pwm_count < green);
     assign RGB[0] = (pwm_count < blue);
+    
+    /*assign cr1 = SW[0];
+    assign cr2 = SW[1];
+    assign cg1 = SW[2];
+    assign cg2 = SW[3];
+    assign cb1 = SW[4];
+    assign cb2 = SW[5];*/
     
 
 endmodule
@@ -348,17 +361,17 @@ module top (
     output logic        PWM_red,
     output logic        PWM_green,
     output logic        PWM_blue,
-    output logic        done,
-    output logic        test_light,
-    output logic        test_light1,
-    output logic        test_light2,
-    output logic        test_light3,
-    output logic        test_light4,
-    output logic        test_uart_rx,
-    output logic        test_reciever,
+    output logic        done
+    /*output logic        r1,
+    output logic        r2,
+    output logic        g1,
+    output logic        g2,
+    output logic        b1,
+    output logic        b2*/
+    /*output logic        test_reciever,
     output logic        test_reciever1,
     output logic        test_reciever2,
-    output logic        test_reciever3
+    output logic        test_reciever3*/
 );
 
     // Internal signals
@@ -385,11 +398,11 @@ module top (
         .reset     (rst),
         .rx        (uart_rx),
         .data_out  (rx_data),
-        .rx_done (rx_done),
-        .ttest_reciever (test_reciever),
+        .rx_done (rx_done)
+        /*.ttest_reciever (test_reciever),
         .ttest_reciever1 (test_reciever1),
         .ttest_reciever2 (test_reciever2),
-        .ttest_reciever3 (test_reciever3)
+        .ttest_reciever3 (test_reciever3)*/
     );
 
     // UART Transmitter instance
@@ -421,7 +434,7 @@ module top (
     );
 
 
-    // Control logic for RGB
+     //Control logic for RGB
     // on ctrl_valid signal we update the ctrl register 
     // ctrl register holds the 6 bit control signal for RGB controller 
     // extracted from the token
@@ -433,19 +446,26 @@ module top (
     logic rgb_controller_reset;
     logic rgb_controller_start;
     assign rgb_controller_reset = rst | rgb_controller_start;
+    logic [5:0] ctrl_reg, ctrl_next;
     
     rgb_controller rgb_controller_inst (
         .clock  (clk),
         .reset  (rgb_controller_reset),
-        .SW     (ctrl),
+        .SW     (ctrl_reg),
         .RGB    ({PWM_red, PWM_green, PWM_blue})
+        /*.cr1    (r1),
+        .cr2    (r2),
+        .cg1    (g1),
+        .cg2    (g2),
+        .cb1    (b1),
+        .cb2    (b2)*/
     );
  
 
 
     // Message bytes to be transmitted
     // "Ready\n" and "Control\n"
-    logic [7:0] message_byte [0:15];
+    logic [7:0] message_byte [0:17];
     initial begin
         message_byte[0]  = "R";
         message_byte[1]  = "e";
@@ -481,7 +501,7 @@ module top (
     } state_echo;
 
     state_echo state, next_state;
-    logic [3:0] tx_index, tx_index_next;
+    logic [4:0] tx_index, tx_index_next;
 
     // internal control registers
     logic tx_start_reg; // pulse to start a tx
@@ -490,23 +510,25 @@ module top (
     logic ctrl_valid_reg;
     logic done_reg;
     // ctrl register and next value (6-bit RGB control)
-    logic [5:0] ctrl_reg, ctrl_next;
+    //logic [5:0] ctrl_reg, ctrl_next;
     logic [47:0] token_latched;
     
     assign test_light4 = rx_done;
     
-    logic counter_rx;
+    logic [3:0] counter_rx;
     always_ff @(posedge clk) begin
         if (rx_done) begin
             if (rst)
                 counter_rx <= 0;
-            else
+            else if (counter_rx == 6)
+                counter_rx <= 0;
+            else 
                 counter_rx <= counter_rx + 1;
         end
     end
     
     logic stop_flag;
-    assign stop_flag = (counter_rx == 8 && rx_done) ? 1'b1 : 1'b0;
+    assign stop_flag = (counter_rx == 6 && rx_done) ? 1'b1 : 1'b0;
     
     // drive outputs
     assign tx_start = tx_start_reg;
@@ -606,11 +628,11 @@ module top (
                 B_val = (B_char >= "0" && B_char <= "3") ? (B_char - "0") : 2'd0;
 
                 // ctrl mapping: [5:4]=R, [3:2]=G, [1:0]=B
-                ctrl_next = {R_val, G_val, B_val};
+                ctrl_next = {B_val, G_val, R_val};
                 ctrl_valid_next = 1'b1;
 
                 // prepare for PRINT2
-                tx_index_next = 4'd7; // starting index for "Control\n"
+                tx_index_next = 4'd8; // starting index for "Control\n"
                 tx_sent_next = 1'b0;
                 next_state = PRINT2;
             end
@@ -623,7 +645,7 @@ module top (
                 end else begin
                     if (tx_done) begin
                         tx_sent_next = 1'b0;
-                        if (tx_index == 5'd16) begin
+                        if (tx_index == 5'd17) begin
                             tx_index_next = 4'd0;
                             next_state = PRINT1;
                         end else begin
@@ -639,14 +661,24 @@ module top (
         endcase
     end
 
-    assign test_light = (state == PRINT1);
+    /*assign test_light = (state == PRINT1);
     assign test_light1 = (state == AWAIT);
     assign test_light2 = (state == CONTROL);
     assign test_light3 = (state == PRINT2);
-    assign test_uart_rx = uart_rx;
-    /*always_ff @(posedge clk) begin  
-        if (next_state == PRINT2)
-            test_light = 1;
+    assign test_uart_rx = uart_rx;*/
+    
+    /**always_ff @(posedge clk) begin  
+        if (uart_rx == 0)
+            test_uart_rx <= 1;
+        if (state == CONTROL)
+            test_light2 <= 1;
+        if (state == PRINT2)
+            test_light3 <= 1;
+        if (rst) begin
+            test_uart_rx <= 0;
+            test_light2 <= 0;
+            test_light3 <= 0;
+        end
     end*/
 
 

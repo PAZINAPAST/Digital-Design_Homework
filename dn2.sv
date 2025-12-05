@@ -156,11 +156,10 @@ module uart_system_receiver #(  //BUG WITH RX_DONE
         endcase
     end
 
-    // expose raw rx level and state signals for debugging on top-level pins
-    assign ttest_reciever  = rx;                // raw serial line (idle=1)
-    assign ttest_reciever1 = (state == IDLE);
-    assign ttest_reciever2 = (state == START);
-    assign ttest_reciever3 = (state == DATA);
+    asssign ttest_reciever = (state == IDLE);
+    asssign ttest_reciever1 = (state == START);
+    asssign ttest_reciever2 = (state == DATA);
+    asssign ttest_reciever3 = (state == STOP);
 
     assign data_out = shift_reg;
 
@@ -355,6 +354,7 @@ module top (
     output logic        test_light2,
     output logic        test_light3,
     output logic        test_light4,
+    output logic        test_uart_rx,
     output logic        test_reciever,
     output logic        test_reciever1,
     output logic        test_reciever2,
@@ -643,6 +643,7 @@ module top (
     assign test_light1 = (state == AWAIT);
     assign test_light2 = (state == CONTROL);
     assign test_light3 = (state == PRINT2);
+    assign test_uart_rx = uart_rx;
     /*always_ff @(posedge clk) begin  
         if (next_state == PRINT2)
             test_light = 1;

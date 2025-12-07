@@ -153,7 +153,7 @@ module uart_system_transmitter (
     
     baud_rate_generator #(
         .BAUD_DIV_WIDTH(16),
-        .BAUD_DIV(5209)
+        .BAUD_DIV(326)
     ) brg_inst (
         .clock(clock),
         .reset(local_reset),
@@ -307,21 +307,21 @@ module rgb_controller (
 endmodule
 
 module top (
-    input  logic        clk,
-    input  logic        rst,
-    input  logic        uart_rx,    // UART receive line
-    output logic        uart_tx,     // UART transmit line
-    output logic        PWM_red,
-    output logic        PWM_green,
-    output logic        PWM_blue,
-    output logic        done
+    input  logic clk,
+    input  logic rst,
+    input  logic uart_rx, // UART receive line
+    output logic uart_tx, // UART transmit line
+    output logic PWM_red,
+    output logic PWM_green,
+    output logic PWM_blue,
+    output logic done
 );
 
     // Internal signals
-    logic [7:0] rx_data;            // Data received from UART
-    logic       tx_done, tx_done_next;           // Ready signal for UART transmitter
-    logic       tx_start, tx_start_next;           // Start signal for UART transmitter
-    logic [7:0] tx_data;            // Data to be transmitted via UART
+    logic [7:0] rx_data;           // Data received from UART
+    logic tx_done, tx_done_next;   // Ready signal for UART transmitter
+    logic tx_start, tx_start_next; // Start signal for UART transmitter
+    logic [7:0] tx_data;           // Data to be transmitted via UART
  
     logic rx_done; // Data received from UART
     logic done_next;
@@ -335,7 +335,7 @@ module top (
         .reset     (rst),
         .rx        (uart_rx),
         .data_out  (rx_data),
-        .rx_done (rx_done)
+        .rx_done   (rx_done)
     );
 
     // UART Transmitter instance
@@ -383,18 +383,18 @@ module top (
     // "Ready\r\n" and "Control\r\n"
     logic [7:0] message_byte [0:17];
     initial begin
-        message_byte[0]  = "R";
-        message_byte[1]  = "e";
-        message_byte[2]  = "a";
-        message_byte[3]  = "d";
-        message_byte[4]  = "y";
-        message_byte[5]  = "\n";
+        message_byte[0] = "R";
+        message_byte[1] = "e";
+        message_byte[2] = "a";
+        message_byte[3] = "d";
+        message_byte[4] = "y";
+        message_byte[5] = "\n";
         message_byte[6] = 13;
         message_byte[7] = 8'h0; // Null terminator
-        message_byte[8]  = "C";
-        message_byte[9]  = "o";
-        message_byte[10]  = "n";
-        message_byte[11]  = "t";
+        message_byte[8] = "C";
+        message_byte[9] = "o";
+        message_byte[10] = "n";
+        message_byte[11] = "t";
         message_byte[12] = "r";
         message_byte[13] = "o";
         message_byte[14] = "l";
@@ -427,7 +427,7 @@ module top (
         if (rx_done) begin
             if (rst)
                 counter_rx <= 0;
-            else if (counter_rx == 6)
+            else if (counter_rx >= 6 && (rx_data == 13 || rx_data == 10)) // newline or carriage return after at least 6 bytes
                 counter_rx <= 0;
             else 
                 counter_rx <= counter_rx + 1;
@@ -435,7 +435,7 @@ module top (
     end
     
     logic stop_flag;
-    assign stop_flag = (counter_rx == 6 && rx_done) ? 1'b1 : 1'b0;
+    assign stop_flag = (counter_rx >= 6 && rx_done && (rx_data == 13 || rx_data == 10)) ? 1'b1 : 1'b0; 
     
     // drive outputs
     assign tx_start = tx_start_reg;

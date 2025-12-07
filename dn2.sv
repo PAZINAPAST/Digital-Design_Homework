@@ -153,7 +153,7 @@ module uart_system_transmitter (
     
     baud_rate_generator #(
         .BAUD_DIV_WIDTH(16),
-        .BAUD_DIV(326)
+        .BAUD_DIV(5209)
     ) brg_inst (
         .clock(clock),
         .reset(local_reset),

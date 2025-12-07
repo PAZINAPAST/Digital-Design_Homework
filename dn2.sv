@@ -282,13 +282,7 @@ module rgb_controller (
     input logic clock,
     input logic reset,
     input logic [5:0] SW,
-    output logic [2:0] RGB,
-    output logic cr1,
-    output logic cr2,
-    output logic cg1,
-    output logic cg2,
-    output logic cb1,
-    output logic cb2
+    output logic [2:0] RGB
 );
 
     logic [1:0] red, green, blue;

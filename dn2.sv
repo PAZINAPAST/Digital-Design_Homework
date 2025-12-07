@@ -1,24 +1,4 @@
 `timescale 1ns / 1ps
-//////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
-// Create Date: 04.12.2025 15:30:00
-// Design Name: 
-// Module Name: top
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-//////////////////////////////////////////////////////////////////////////////////
-
 
 module baud_rate_generator #(
     parameter BAUD_DIV_WIDTH = 16,
@@ -41,7 +21,7 @@ module baud_rate_generator #(
     assign baud_rate_tick = (cnt == BAUD_DIV);
 endmodule   
 
-module uart_system_receiver #(  //BUG WITH RX_DONE
+module uart_system_receiver #(
     parameter DBITS = 8,
     parameter SBITS = 1
 )(
@@ -50,10 +30,6 @@ module uart_system_receiver #(  //BUG WITH RX_DONE
     input logic rx,
     output logic [DBITS-1:0] data_out,
     output logic rx_done
-    /*output logic ttest_reciever,
-    output logic ttest_reciever1,
-    output logic ttest_reciever2,
-    output logic ttest_reciever3*/
 );
 
     logic sample_tick;
@@ -143,7 +119,7 @@ module uart_system_receiver #(  //BUG WITH RX_DONE
                 end
             end
             
-            STOP: begin // we never reach this state?
+            STOP: begin
                 if (sample_tick) begin
                     if(s_cnt == STOP_TICKS-1) begin
                         rx_done_next = 1'b1;
@@ -155,11 +131,6 @@ module uart_system_receiver #(  //BUG WITH RX_DONE
             end                 
         endcase
     end
-
-    /*asssign ttest_reciever = (state == IDLE);
-    asssign ttest_reciever1 = (state == START);
-    asssign ttest_reciever2 = (state == DATA);
-    asssign ttest_reciever3 = (state == STOP);*/
 
     assign data_out = shift_reg;
 
@@ -209,7 +180,6 @@ module uart_system_transmitter (
     end
     
     always_comb begin : tx_line
-        // default
         tx = 1'b1;
         case (state)
             START: tx = 1'b0;
@@ -252,7 +222,6 @@ module uart_system_transmitter (
     end
     
     always_comb begin: ust_transition
-        // priority transitions (avoid complex ternary expressions)
         next_state = state;
         if (start_trans)
             next_state = START;
@@ -282,7 +251,6 @@ module shift_reg_with_par_read #(
     output logic [DATA_WIDTH*DEPTH-1:0] rd_data
 );
 
-    // Simple shift-register array with parallel read output.
     logic [DATA_WIDTH-1:0] mem [0:DEPTH-1];
     integer i;
 
@@ -299,7 +267,6 @@ module shift_reg_with_par_read #(
     end
 
     // parallel read output: most-recent at low bits (mem[0])
-    // Use generate + continuous assigns (avoids procedural part-select issues)
     genvar gi, bj;
     generate
         for (gi = 0; gi < DEPTH; gi = gi + 1) begin : rd_assign
@@ -342,36 +309,18 @@ module rgb_controller (
     assign RGB[2] = (pwm_count < red);
     assign RGB[1] = (pwm_count < green);
     assign RGB[0] = (pwm_count < blue);
-    
-    /*assign cr1 = SW[0];
-    assign cr2 = SW[1];
-    assign cg1 = SW[2];
-    assign cg2 = SW[3];
-    assign cb1 = SW[4];
-    assign cb2 = SW[5];*/
-    
 
 endmodule
 
 module top (
-    input  logic        clk,        // System clock
-    input  logic        rst,      // Active-high reset
+    input  logic        clk,
+    input  logic        rst,
     input  logic        uart_rx,    // UART receive line
     output logic        uart_tx,     // UART transmit line
     output logic        PWM_red,
     output logic        PWM_green,
     output logic        PWM_blue,
     output logic        done
-    /*output logic        r1,
-    output logic        r2,
-    output logic        g1,
-    output logic        g2,
-    output logic        b1,
-    output logic        b2*/
-    /*output logic        test_reciever,
-    output logic        test_reciever1,
-    output logic        test_reciever2,
-    output logic        test_reciever3*/
 );
 
     // Internal signals
@@ -379,14 +328,8 @@ module top (
     logic       tx_done, tx_done_next;           // Ready signal for UART transmitter
     logic       tx_start, tx_start_next;           // Start signal for UART transmitter
     logic [7:0] tx_data;            // Data to be transmitted via UART
-
-    // To uart system receiver
-    logic rx_read, rx_read_next; 
-    logic rx_empty;
-    logic rx_valid; 
+ 
     logic rx_done; // Data received from UART
-
-
     logic done_next;
 
     // UART Receiver instance
@@ -399,10 +342,6 @@ module top (
         .rx        (uart_rx),
         .data_out  (rx_data),
         .rx_done (rx_done)
-        /*.ttest_reciever (test_reciever),
-        .ttest_reciever1 (test_reciever1),
-        .ttest_reciever2 (test_reciever2),
-        .ttest_reciever3 (test_reciever3)*/
     );
 
     // UART Transmitter instance
@@ -433,38 +372,21 @@ module top (
         .rd_data    (token)
     );
 
-
-     //Control logic for RGB
-    // on ctrl_valid signal we update the ctrl register 
-    // ctrl register holds the 6 bit control signal for RGB controller 
-    // extracted from the token
     logic [5:0] ctrl;
     logic ctrl_valid, ctrl_valid_next;
 
        // Instantiate the RGB controller
-
-    logic rgb_controller_reset;
-    logic rgb_controller_start;
-    assign rgb_controller_reset = rst | rgb_controller_start;
     logic [5:0] ctrl_reg, ctrl_next;
     
     rgb_controller rgb_controller_inst (
         .clock  (clk),
-        .reset  (rgb_controller_reset),
+        .reset  (rst),
         .SW     (ctrl_reg),
         .RGB    ({PWM_red, PWM_green, PWM_blue})
-        /*.cr1    (r1),
-        .cr2    (r2),
-        .cg1    (g1),
-        .cg2    (g2),
-        .cb1    (b1),
-        .cb2    (b2)*/
     );
- 
-
-
+    
     // Message bytes to be transmitted
-    // "Ready\n" and "Control\n"
+    // "Ready\r\n" and "Control\r\n"
     logic [7:0] message_byte [0:17];
     initial begin
         message_byte[0]  = "R";
@@ -487,11 +409,6 @@ module top (
         message_byte[17] = 8'h0; // Null terminator
     end
 
-
- 
-    // control logic for UART transmission
-
-
     // define the states
     typedef enum logic [1:0] { // binary encoding
         PRINT1,
@@ -503,17 +420,13 @@ module top (
     state_echo state, next_state;
     logic [4:0] tx_index, tx_index_next;
 
-    // internal control registers
-    logic tx_start_reg; // pulse to start a tx
-    logic tx_sent, tx_sent_next;       // indicates we've pulsed tx_start for current char
+    logic tx_start_reg;
+    logic tx_sent, tx_sent_next;
     logic rd_en_reg;
     logic ctrl_valid_reg;
     logic done_reg;
-    // ctrl register and next value (6-bit RGB control)
-    //logic [5:0] ctrl_reg, ctrl_next;
-    logic [47:0] token_latched;
     
-    assign test_light4 = rx_done;
+    logic [47:0] token_latched;
     
     logic [3:0] counter_rx;
     always_ff @(posedge clk) begin
@@ -562,7 +475,6 @@ module top (
             // latch token when rd_en asserted
             if (rd_en_next)
                 token_latched <= token;
-            // update ctrl register
             ctrl_reg <= ctrl_next;
         end
     end
@@ -577,11 +489,10 @@ module top (
         rd_en_next = 1'b0;
         ctrl_valid_next = 1'b0;
         done_next = 1'b0;
-        // default ctrl_next holds previous value
         ctrl_next = ctrl_reg;
 
         case (state)
-            // PRINT1: send "Ready\n" bytes [0..5]
+            // PRINT1: send "Ready\r\n" bytes [0..6]
             PRINT1: begin
                 if (!tx_sent) begin
                     // start transmitting current byte
@@ -594,7 +505,6 @@ module top (
                         if (tx_index == 4'd6) begin
                             // finished printing "Ready\n"
                             done_next = 1'b1; // pulse done to reset shift reg
-                            //tx_index_next = 4'd0;
                             tx_index_next = tx_index + 1;
                             next_state = AWAIT;
                         end else begin
@@ -604,7 +514,7 @@ module top (
                 end
             end
 
-            // AWAIT: wait for newline (stop_flag). When seen, assert rd_en one cycle and go to CONTROL
+            // AWAIT: wait for stop_flag. When seen, assert rd_en one cycle and go to CONTROL
             AWAIT: begin
                 if (stop_flag) begin
                     rd_en_next = 1'b1;
@@ -617,7 +527,7 @@ module top (
                 // extract characters according to shift order (mem[0] = last received)
                 logic [7:0] R_char, G_char, B_char;
                 logic [1:0] R_val, G_val, B_val;
-                // explicit ranges (avoid +: part-select in procedural block)
+                
                 R_char = token_latched[39:32];
                 G_char = token_latched[23:16];
                 B_char = token_latched[7:0];
@@ -632,12 +542,12 @@ module top (
                 ctrl_valid_next = 1'b1;
 
                 // prepare for PRINT2
-                tx_index_next = 4'd8; // starting index for "Control\n"
+                tx_index_next = 4'd8; // starting index for "Control\r\n"
                 tx_sent_next = 1'b0;
                 next_state = PRINT2;
             end
 
-            // PRINT2: send "Control\n" bytes [7..14]
+            // PRINT2: send "Control\r\n" bytes [8..17]
             PRINT2: begin
                 if (!tx_sent) begin
                     tx_start_next = 1'b1;
@@ -660,26 +570,5 @@ module top (
             end
         endcase
     end
-
-    /*assign test_light = (state == PRINT1);
-    assign test_light1 = (state == AWAIT);
-    assign test_light2 = (state == CONTROL);
-    assign test_light3 = (state == PRINT2);
-    assign test_uart_rx = uart_rx;*/
-    
-    /**always_ff @(posedge clk) begin  
-        if (uart_rx == 0)
-            test_uart_rx <= 1;
-        if (state == CONTROL)
-            test_light2 <= 1;
-        if (state == PRINT2)
-            test_light3 <= 1;
-        if (rst) begin
-            test_uart_rx <= 0;
-            test_light2 <= 0;
-            test_light3 <= 0;
-        end
-    end*/
-
 
 endmodule
